@@ -1,42 +1,46 @@
 import { jwtDecode } from "jwt-decode";
 
-export const Decode = (token: string) => {
+interface DecodedToken {
+  exp: number;
+  [key: string]: unknown;
+}
+
+export const decodeToken = (token: string): DecodedToken | null => {
   try {
-    const decoded = jwtDecode(token);
+    const decoded = jwtDecode<DecodedToken>(token);
+    console.log(decoded);
     return decoded;
   } catch (error) {
-    console.error("Error decoding token", error);
+    console.error("Error al decodificar el token:", error);
+    return null;
   }
 };
 
-export const tokenExpired = () => {
+export const getValidToken = (): string | null => {
   try {
     const accessToken = localStorage.getItem("accessToken");
     const refreshToken = localStorage.getItem("refreshToken");
     const currentTime = Math.floor(Date.now() / 1000);
 
     if (!accessToken || !refreshToken) {
-      return true;
+      console.error("Tokens no encontrados en el almacenamiento local.");
+      return null;
     }
 
-    const refreshTokenDecoded = Decode(refreshToken);
+    const refreshTokenDecoded = decodeToken(refreshToken);
+    if (!refreshTokenDecoded) return null;
 
-    const expirationTimeRefreshToken = refreshTokenDecoded?.exp;
-    const expiredRefreshToken =
-      expirationTimeRefreshToken && expirationTimeRefreshToken < currentTime;
-
-    if (expiredRefreshToken) {
-      return true;
+    if (refreshTokenDecoded.exp < currentTime) {
+      console.error("El refresh token ha expirado.");
+      return null;
     }
 
-    const tokenDecode = Decode(accessToken);
+    const accessTokenDecoded = decodeToken(accessToken);
+    if (!accessTokenDecoded) return null;
 
-    const expirationTime = tokenDecode?.exp;
-    const expired = expirationTime && expirationTime < currentTime;
-    const token = expired ? refreshToken : accessToken;
-
-    return token;
+    return accessTokenDecoded.exp < currentTime ? refreshToken : accessToken;
   } catch (error) {
-    console.error("Error checking token expiration", error);
+    console.error("Error al obtener un token válido:", error);
+    return null;
   }
 };

@@ -1,0 +1,115 @@
+"use client";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { getValidToken } from "@/utils/jwtDecode";
+
+type GenreType = {
+  gender: string;
+};
+
+type GenderProps = {
+  showFullGender: (genre: GenreType) => void;
+};
+
+const Gender = ({ showFullGender }: GenderProps) => {
+  const [genderList, setGenderList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = getValidToken();
+    if (!token) return;
+
+    setToken(token);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchGendersData = async () => {
+      try {
+        const response = await fetch("/api/gender", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setGenderList(data);
+        } else {
+          console.error("Error al obtener los géneros.");
+        }
+      } catch (error) {
+        console.error("Error al obtener los géneros:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGendersData();
+  }, [token]);
+
+  const SkeletonGender = () => (
+    <article className="grid w-full grid-cols-2 gap-4 px-4 py-5 sm:grid-cols-3 md:grid-cols-4 animate-pulse">
+      {[...Array(4)].map((_, index) => (
+        <div
+          key={index}
+          className="col-span-1 bg-gray-300 aspect-video rounded-xl"
+        />
+      ))}
+    </article>
+  );
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 },
+  };
+
+  if (loading) {
+    return <SkeletonGender />;
+  }
+
+  return (
+    <motion.article
+      className="grid w-full grid-cols-2 gap-4 px-4 py-5 sm:grid-cols-3 md:grid-cols-4"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
+      {genderList.map(({ gender, image }) => (
+        <motion.button
+          className="grid aspect-video col-span-1 grid-cols-2 content-center rounded-xl gap-4 bg-waterGreen-500 p-2.5 hover:bg-waterGreen-600 transition-colors duration-300"
+          key={gender}
+          onClick={() => showFullGender({ gender })}
+          variants={item}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <div className="flex items-center w-full h-full pl-2 text-lg">
+            <h2 className="font-semibold text-white">{gender}</h2>
+          </div>
+          <picture className="w-full col-start-2 overflow-hidden rounded-xl place-self-center">
+            <img
+              src={image}
+              alt={gender}
+              className="object-cover w-full h-full"
+            />
+          </picture>
+        </motion.button>
+      ))}
+    </motion.article>
+  );
+};
+
+export default Gender;

@@ -13,3 +13,17 @@ interface SpeechRecognition extends EventTarget {
   start: () => void;
   stop: () => void;
 }
+
+interface SpeechRecognitionEvent extends Event {
+  results: {
+    [key: number]: {
+      [key: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
